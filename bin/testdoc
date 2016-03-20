@@ -1,0 +1,28 @@
+#!/usr/bin/env python
+
+import os
+import sys
+sys.path.insert(0, os.path.abspath('__file__/..'))
+import evdoc
+
+doc = evdoc.core.Document()
+
+print len(doc.lines)
+
+doc.addstr("hello my name is evan\n")
+doc.addstr("this is some text\nand so is this\n")
+doc.addstr("\n")
+doc.addstr("foo")
+doc.addstr("bar")
+doc.addstr("bat")
+doc.addstr("\nheyooo")
+
+doc.set_cursor(1,5)
+doc.addchar("\n")
+
+print doc.lines
+
+i = 1
+for l in doc.lines:
+    print "%d) %s" % (i, l)
+    i += 1

@@ -6,7 +6,7 @@ import curses.ascii
 
 class Document:
     def __init__(self):
-        self.lines = []
+        self.lines = ['']
         self.line = 0
         self.col = 0
         pass
@@ -35,19 +35,17 @@ class Document:
     def addstr(self, str):
         "Insert a string at the current cursor location. Handles newline chars."
         start = 0
-        end = 0
         length = len(str)
         while start < length:
             # Look for the next newline, or end of string
+            end = start
             while end < length and str[end] != "\n":
-                end++
+                end += 1
             # Insert the string, and optionally a newline
             self._insert_string(str[start:end])
-            if str[end] == "\n":
+            if end < length and str[end] == "\n":
                 self._insert_new_line()
-            # Move our start/end indexes
             start = end + 1
-            end = start
 
     def _insert_string(self, str):
         '''
@@ -56,11 +54,11 @@ class Document:
         '''
         if len(str) > 0:
             # Split the current line into left and right sides
-            line = self.lines[:self.line]
+            line = self.lines[self.line]
             lhs = line[:self.col]
             rhs = line[self.col:]
             # Create the new line
-            self.lines[:self.line] = lhs + self + rhs
+            self.lines[self.line] = lhs + str + rhs
             # Move the cursor
             self.col += len(str)
 
@@ -72,7 +70,7 @@ class Document:
         rhs = line[self.col:]
         # Insert a new line, which equals the right side). The existing line
         # becomes the left side.
-        self.lines = self.lines[:self.line] + [rhs] + self.lines[self.line:]
+        self.lines = self.lines[:self.line+1] + [rhs] + self.lines[self.line+1:]
         self.lines[self.line] = lhs
         # Move the cursor
         self.line += 1
