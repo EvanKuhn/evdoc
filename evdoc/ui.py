@@ -100,6 +100,14 @@ class Editor:
         self._update_cursor()
         self.window.refresh()
 
+    def redraw_current_line(self):
+        y, x = self.window.getyx()
+        line = self.document.lines[y-1]
+        self.window.addstr(y, 1, line)
+        self.window.redrawln(y, 1)
+        self.window.move(y, x)
+        self.window.refresh()
+
     def move_up(self):
         self.document.move_up()
         self._update_cursor()

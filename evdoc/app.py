@@ -64,7 +64,7 @@ class App:
                     self.editor.redraw()
                 elif curses.ascii.isprint(c):
                     self.editor.addch(c)
-                    #TODO: self.editor.redraw_current_line
+                    self.editor.redraw_current_line()
                 elif c == curses.KEY_UP:
                     self.editor.move_up()
                 elif c == curses.KEY_DOWN:
