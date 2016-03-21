@@ -7,26 +7,26 @@ import curses.ascii
 class Document:
     def __init__(self):
         self.lines = ['']
-        self.line = 0
-        self.col = 0
+        self.y = 0
+        self.x = 0
         pass
 
-    def set_cursor(self, line, col):
+    def move(self, y, x):
         "Set the cursor location. Will keep cursor within bounds of the document."
-        max_line = len(self.lines) - 1
-        self.line = max_line if line > max_line else line
-        max_col = len(self.lines[self.line])
-        self.col = max_col if col > max_col else col
+        self.y = max(y, len(self.lines) - 1)
+        self.x = max(x, len(self.lines[self.y]))
 
-    def get_cursor(self):
-        "Return the cursor location as (line,col)"
-        return (self.line, self.col)
+    def getyx(self):
+        "Return the cursor location as (y,x)"
+        return (self.y, self.x)
 
-    def addchar(self, c):
+    def addch(self, c):
         '''
         Insert a character at the current cursor location. Ignores
         non-printable characters.
         '''
+        if type(c) == int:
+            c = chr(c)
         if c == "\n":
             self._insert_new_line()
         elif curses.ascii.isprint(c):
@@ -54,32 +54,58 @@ class Document:
         '''
         if len(str) > 0:
             # Split the current line into left and right sides
-            line = self.lines[self.line]
-            lhs = line[:self.col]
-            rhs = line[self.col:]
+            line = self.lines[self.y]
+            lhs = line[:self.x]
+            rhs = line[self.x:]
             # Create the new line
-            self.lines[self.line] = lhs + str + rhs
+            self.lines[self.y] = lhs + str + rhs
             # Move the cursor
-            self.col += len(str)
+            self.x += len(str)
 
     def _insert_new_line(self):
         "Insert a newline at the current cursor location"
         # Split the current line into left and right sides
-        line = self.lines[self.line]
-        lhs = line[:self.col]
-        rhs = line[self.col:]
+        line = self.lines[self.y]
+        lhs = line[:self.x]
+        rhs = line[self.x:]
         # Insert a new line, which equals the right side). The existing line
         # becomes the left side.
-        self.lines = self.lines[:self.line+1] + [rhs] + self.lines[self.line+1:]
-        self.lines[self.line] = lhs
+        self.lines = self.lines[:self.y+1] + [rhs] + self.lines[self.y+1:]
+        self.lines[self.y] = lhs
         # Move the cursor
-        self.line += 1
-        self.col = 0
+        self.y += 1
+        self.x = 0
 
 #==============================================================================
 # Word-wrapped document
 #==============================================================================
 
 class WordWrappedDocument:
-    def __init__(self, doc):
+    def __init__(self, doc, width):
+        self.doc = doc
+        self.width = width
+        self.lines = []     # Holds document location as tuple: (y, x, length)
+        self.y = 0
+        self.x = 0
+
+    def move(self, y, x):
+        '''
+        Set the cursor location. Will keep cursor within bounds of the document.
+        Also updates the cursor in the original document.
+        '''
+        pass
+
+    def getyx(self):
+        "Return the cursor location as (y,x)"
+        return (self.y, self.x)
+
+    def addch(self, c):
+        '''
+        Insert a character at the current cursor location. Ignores
+        non-printable characters.
+        '''
+        pass
+
+    def addstr(self, str):
+        "Insert a string at the current cursor location. Handles newline chars."
         pass

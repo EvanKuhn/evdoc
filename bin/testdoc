@@ -17,8 +17,8 @@ doc.addstr("bar")
 doc.addstr("bat")
 doc.addstr("\nheyooo")
 
-doc.set_cursor(1,5)
-doc.addchar("\n")
+doc.move(1,5)
+doc.addch("\n")
 
 print doc.lines
 
