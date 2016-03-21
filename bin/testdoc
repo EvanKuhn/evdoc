@@ -11,7 +11,7 @@ print len(doc.lines)
 
 doc.addstr("hello my name is evan\n")
 doc.addstr("this is some text\nand so is this\n")
-doc.addstr("\n")
+doc.addch("\n")
 doc.addstr("foo")
 doc.addstr("bar")
 doc.addstr("bat")

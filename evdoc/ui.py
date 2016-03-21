@@ -19,20 +19,20 @@ class Layout:
         self.terminal_cols = cols
 
         # Calculate dimensions of each window
-        self.title_rows         = Layout.TITLE_ROWS
-        self.title_cols         = cols
-        self.title_start_row    = 0
-        self.title_start_col    = 0
+        self.title_rows       = Layout.TITLE_ROWS
+        self.title_cols       = cols
+        self.title_start_row  = 0
+        self.title_start_col  = 0
 
-        self.editor_rows       = rows - Layout.TITLE_ROWS - Layout.PROMPT_ROWS
-        self.editor_cols       = cols
-        self.editor_start_row  = 1
-        self.editor_start_col  = 0
+        self.editor_rows      = rows - Layout.TITLE_ROWS - Layout.PROMPT_ROWS
+        self.editor_cols      = cols
+        self.editor_start_row = 1
+        self.editor_start_col = 0
 
-        self.prompt_rows        = Layout.PROMPT_ROWS
-        self.prompt_cols        = cols
-        self.prompt_start_row   = rows - 1
-        self.prompt_start_col   = 0
+        self.prompt_rows      = Layout.PROMPT_ROWS
+        self.prompt_cols      = cols
+        self.prompt_start_row = rows - 1
+        self.prompt_start_col = 0
 
     @staticmethod
     def terminal_size():
@@ -60,6 +60,8 @@ class Title:
 
 class Editor:
     def __init__(self, layout, screen):
+        self.document = evdoc.core.Document()
+        # UI objects
         self.layout = layout
         self.screen = screen
         self.window = curses.newwin(layout.editor_rows, layout.editor_cols,
@@ -68,9 +70,13 @@ class Editor:
         # Because we have a border, the number of visible rows/cols is fewer
         self.visible_rows = self.layout.editor_rows - 2
         self.visible_cols = self.layout.editor_cols - 2
-        self.document = evdoc.core.Document()
-        self.first_row = 0
-        self.window.move(0,0)
+        self.min_row = 1
+        self.max_row = self.visible_rows
+        self.min_col = 1
+        self.max_col = self.visible_cols
+        self.row_offset = 0
+        self.col_offset = 0
+        self._update_cursor()
 
     def getch(self):
         "Get a single character from the user"
@@ -79,7 +85,6 @@ class Editor:
     def addch(self, c):
         "Append a character to the editor. Does not redraw."
         self.document.addch(c)
-        self.redraw()
 
     def redraw(self):
         self.window.clear()
@@ -87,22 +92,34 @@ class Editor:
 
         # Draw the last N messages, where N is the number of visible rows
         row = 1
-        for line in self.document.lines[self.first_row:self.visible_rows]:
-            self.window.move(row, 1)
-            self.window.addstr(line)
+        for line in self.document.lines[0:self.visible_rows]:
+            self.window.addstr(row, 1, line)
             row += 1
 
-        # Update the cursor in the editor to match the document
-        y, x = self.document.getyx()
-        self.move(y, x)
-
-        # Finally, refresh the curses window
+        # Update the cursor and refresh
+        self._update_cursor()
         self.window.refresh()
 
-    def move(self, y, x):
-        "Move the cursor. Takes borders into account."
-        self.window.move(y+1, x+1)
+    def move_up(self):
+        self.document.move_up()
+        self._update_cursor()
 
+    def move_down(self):
+        self.document.move_down()
+        self._update_cursor()
+
+    def move_left(self):
+        self.document.move_left()
+        self._update_cursor()
+
+    def move_right(self):
+        self.document.move_right()
+        self._update_cursor()
+
+    def _update_cursor(self):
+        "Update the window cursor based on the document cursor"
+        y, x = self.document.getyx()
+        self.window.move(y+1, x+1)
 
 #==============================================================================
 # The Prompt class allows the user to enter commands

@@ -11,14 +11,45 @@ class Document:
         self.x = 0
         pass
 
-    def move(self, y, x):
-        "Set the cursor location. Will keep cursor within bounds of the document."
-        self.y = max(y, len(self.lines) - 1)
-        self.x = max(x, len(self.lines[self.y]))
-
     def getyx(self):
         "Return the cursor location as (y,x)"
         return (self.y, self.x)
+
+    def move(self, y, x):
+        "Set the cursor location. Will keep cursor within bounds of the document."
+        self.y = max(0, min(y, self.max_y()))
+        self.x = max(0, min(x, self.max_x()))
+
+    def move_up(self):
+        "Move the cursor up, if possible"
+        self.move(self.y-1, self.x)
+
+    def move_down(self):
+        "Move the cursor down, if possible"
+        self.move(self.y+1, self.x)
+
+    def move_left(self):
+        "Move the cursor left, if possible"
+        if self.x > 0:
+            self.move(self.y, self.x-1)
+        elif self.y > 0:
+            self.move(self.y-1, self.x)
+            self.move(self.y, self.max_x())
+
+    def move_right(self):
+        "Move the cursor right, if possible"
+        if self.x < self.max_x():
+            self.move(self.y, self.x+1)
+        elif self.y < self.max_y():
+            self.move(self.y+1, 0)
+
+    def max_y(self):
+        "Return the highest value for y for the cursor"
+        return max(0, len(self.lines) - 1)
+
+    def max_x(self):
+        "Return the highest value for x for the cursor on the current line"
+        return len(self.lines[self.y]) if len(self.lines) > 0 else 0
 
     def addch(self, c):
         '''

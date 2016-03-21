@@ -55,30 +55,33 @@ class App:
 
             # Run the main loop
             while True:
-                #curses.curs_set(0)
-                #curses.setsyx(3, 2)
-
-                y, x = curses.getsyx()
-                debug.write("cursor location: %d, %d\n" % (y, x))
-                debug.flush()
-
                 # Get input
                 c = self.editor.getch()
-                #if debug:
-                #    debug.write("char: " + str(c) + "\n")
-                #    debug.write("KEY_UP = " + str(curses.KEY_UP) + "\n")
-                #    debug.write(str(c == curses.KEY_UP) + "\n")
-                #    debug.flush()
-                #text = '' #TODO
 
-                # Parse the character
-                # TODO
+                # Take action
+                if c == ord("\n"):
+                    self.editor.addch(c)
+                    self.editor.redraw()
+                elif curses.ascii.isprint(c):
+                    self.editor.addch(c)
+                    #TODO: self.editor.redraw_current_line
+                elif c == curses.KEY_UP:
+                    self.editor.move_up()
+                elif c == curses.KEY_DOWN:
+                    self.editor.move_down()
+                elif c == curses.KEY_LEFT:
+                    self.editor.move_left()
+                elif c == curses.KEY_RIGHT:
+                    self.editor.move_right()
+                elif c == curses.KEY_RESIZE:
+                    self.editor.redraw()
 
-                # Add the character to the editor
-                self.editor.addch(c)
-
-                # Update the UI
-                #self.editor.redraw()
+                # Debug output
+                win_y, win_x = self.editor.window.getyx()
+                doc_y, doc_x = self.editor.document.getyx()
+                debug.write("doc: (%d, %d)  win: (%d, %d)\n" % \
+                    (doc_y, doc_x, win_y, win_x))
+                debug.flush()
 
         # Ignore keyboard interrupts and exit cleanly
         except KeyboardInterrupt:
