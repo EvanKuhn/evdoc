@@ -75,12 +75,20 @@ class App:
                     self.editor.move_right()
                 elif c == curses.KEY_RESIZE:
                     self.editor.redraw()
+                elif c == curses.ascii.DEL:
+                    self.editor.backspace()
+                    self.editor.redraw()
+                elif c == curses.KEY_DC:
+                    self.editor.delete()
+                    self.editor.redraw()
+                elif c == curses.ascii.ESC:
+                    pass #TODO
 
                 # Debug output
                 win_y, win_x = self.editor.window.getyx()
                 doc_y, doc_x = self.editor.document.getyx()
-                debug.write("doc: (%d, %d)  win: (%d, %d)\n" % \
-                    (doc_y, doc_x, win_y, win_x))
+                debug.write("char: %d\n" % c)
+                #debug.write("doc: (%d, %d)  win: (%d, %d)\n" % (doc_y, doc_x, win_y, win_x))
                 debug.flush()
 
         # Ignore keyboard interrupts and exit cleanly

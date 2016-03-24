@@ -86,6 +86,14 @@ class Editor:
         "Append a character to the editor. Does not redraw."
         self.document.addch(c)
 
+    def backspace(self):
+        "Delete the character to the left of the cursor. Does not redraw."
+        self.document.backspace()
+
+    def delete(self):
+        "Delete the character at the cursor. Does not redraw."
+        self.document.delete()
+
     def redraw(self):
         self.window.clear()
         self.window.border(0)
