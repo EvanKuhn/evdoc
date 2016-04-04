@@ -18,9 +18,11 @@ class App:
         "Start curses, and initialize the `screen` class variable"
         if App.running:
             raise StandardError("Curses is already running")
+
         # Fix stupidly long delay on the Escape key
         # http://stackoverflow.com/questions/27372068/
         os.environ.setdefault('ESCDELAY', '25')
+
         # Now initialize curses
         self.screen = curses.initscr()
         curses.cbreak()
@@ -45,6 +47,7 @@ class App:
         self.screen.refresh()
         self.title.redraw()
         self.prompt.redraw()
+        self.frame.redraw()
         self.editor.redraw()
 
     def start(self):
@@ -54,9 +57,10 @@ class App:
         try:
             # Start curses and initialize all curses-based objects
             self._start_curses()
-            self.title  = evdoc.ui.Title(self.layout, self.screen, evdoc.TITLE)
-            self.editor = evdoc.ui.Editor(self.layout, self.screen)
-            self.prompt = evdoc.ui.Prompt(self.layout, self.screen)
+            self.title = evdoc.ui.Title(self.layout, evdoc.TITLE)
+            self.frame = evdoc.ui.Frame(self.layout)
+            self.editor = evdoc.ui.Editor(self.layout)
+            self.prompt = evdoc.ui.Prompt(self.layout)
             self.redraw()
 
             # Run the main loop

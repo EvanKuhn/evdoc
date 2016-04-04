@@ -24,10 +24,15 @@ class Layout:
         self.title_start_row  = 0
         self.title_start_col  = 0
 
-        self.editor_rows      = rows - Layout.TITLE_ROWS - Layout.PROMPT_ROWS
-        self.editor_cols      = cols
-        self.editor_start_row = 1
-        self.editor_start_col = 0
+        self.frame_rows       = rows - Layout.TITLE_ROWS - Layout.PROMPT_ROWS
+        self.frame_cols       = cols
+        self.frame_start_row  = 1
+        self.frame_start_col  = 0
+
+        self.editor_rows      = self.frame_rows - 2
+        self.editor_cols      = self.frame_cols - 2
+        self.editor_start_row = self.frame_start_row + 1
+        self.editor_start_col = self.frame_start_col + 1
 
         self.prompt_rows      = Layout.PROMPT_ROWS
         self.prompt_cols      = cols
@@ -45,7 +50,7 @@ class Layout:
 #==============================================================================
 
 class Title:
-    def __init__(self, layout, screen, text):
+    def __init__(self, layout, text):
         self.window = curses.newwin(layout.title_rows, layout.title_cols,
             layout.title_start_row, layout.title_start_col)
         start_col = (layout.title_cols - len(text)) / 2
@@ -55,27 +60,31 @@ class Title:
         self.window.refresh()
 
 #==============================================================================
+# The Frame simply draws a frame (around the editor)
+#==============================================================================
+
+class Frame:
+    def __init__(self, layout):
+        self.window = curses.newwin(layout.frame_rows, layout.frame_cols,
+            layout.frame_start_row, layout.frame_start_col)
+
+    def redraw(self):
+        self.window.border()
+        self.window.refresh()
+
+#==============================================================================
 # The Editor class displays the document
 #==============================================================================
 
 class Editor:
-    def __init__(self, layout, screen):
+    def __init__(self, layout):
         self.document = evdoc.core.Document()
         # UI objects
         self.layout = layout
-        self.screen = screen
-        self.window = curses.newwin(layout.editor_rows, layout.editor_cols,
+        self.window = curses.newwin(
+            layout.editor_rows, layout.editor_cols,
             layout.editor_start_row, layout.editor_start_col)
         self.window.keypad(1)
-        # Because we have a border, the number of visible rows/cols is fewer
-        self.visible_rows = self.layout.editor_rows - 2
-        self.visible_cols = self.layout.editor_cols - 2
-        self.min_row = 1
-        self.max_row = self.visible_rows
-        self.min_col = 1
-        self.max_col = self.visible_cols
-        self.row_offset = 0
-        self.col_offset = 0
         self._update_cursor()
 
     def getch(self):
@@ -97,12 +106,11 @@ class Editor:
 
     def redraw(self):
         self.window.clear()
-        self.window.border(0)
 
         # Draw the last N messages, where N is the number of visible rows
-        row = 1
-        for line in self.document.lines[0:self.visible_rows]:
-            self.window.addstr(row, 1, line)
+        row = 0
+        for line in self.document.lines[0:self.layout.editor_rows]:
+            self.window.addstr(row, 0, line)
             row += 1
 
         # Update the cursor and refresh
@@ -111,9 +119,9 @@ class Editor:
 
     def redraw_current_line(self):
         y, x = self.window.getyx()
-        line = self.document.lines[y-1]
-        self.window.addstr(y, 1, line)
-        self.window.redrawln(y, 1)
+        line = self.document.lines[y]
+        self.window.addstr(y, 0, line)
+        self.window.redrawln(y, 0)
         self.window.move(y, x)
         self.window.refresh()
 
@@ -136,16 +144,15 @@ class Editor:
     def _update_cursor(self):
         "Update the window cursor based on the document cursor"
         y, x = self.document.getyx()
-        self.window.move(y+1, x+1)
+        self.window.move(y, x)
 
 #==============================================================================
 # The Prompt class allows the user to enter commands
 #==============================================================================
 
 class Prompt:
-    def __init__(self, layout, screen):
+    def __init__(self, layout):
         self.layout = layout
-        self.screen = screen
         self.window = curses.newwin(layout.prompt_rows, layout.prompt_cols,
             layout.prompt_start_row, layout.prompt_start_col)
         self.window.keypad(1)
