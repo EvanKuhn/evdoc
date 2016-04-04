@@ -4,12 +4,15 @@ import curses.ascii
 # Basic document object, with lines separated
 #==============================================================================
 
-class Document:
+class Document(object):
     def __init__(self):
+        self.clear()
+
+    def clear(self):
+        "Clear the document of all contents"
         self.lines = ['']
         self.y = 0
         self.x = 0
-        pass
 
     def getyx(self):
         "Return the cursor location as (y,x)"
@@ -136,7 +139,8 @@ class Document:
 # Word-wrapped document
 #==============================================================================
 
-class WordWrappedDocument:
+#TODO: should this be a subclass of Document?
+class WordWrappedDocument(object):
     def __init__(self, doc, width):
         self.doc = doc
         self.width = width

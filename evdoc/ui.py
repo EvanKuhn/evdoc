@@ -7,7 +7,7 @@ import evdoc
 # Simple class to calculate the layout of our UI and windows.
 #==============================================================================
 
-class Layout:
+class Layout(object):
     TITLE_ROWS = 1
     PROMPT_ROWS = 1
 
@@ -50,7 +50,7 @@ class Layout:
 # This just displays the title
 #==============================================================================
 
-class Title:
+class Title(object):
     def __init__(self, layout, text):
         self.window = curses.newwin(layout.title_rows, layout.title_cols,
             layout.title_start_row, layout.title_start_col)
@@ -64,7 +64,7 @@ class Title:
 # The Frame simply draws a frame (around the editor)
 #==============================================================================
 
-class Frame:
+class Frame(object):
     def __init__(self, layout):
         self.window = curses.newwin(layout.frame_rows, layout.frame_cols,
             layout.frame_start_row, layout.frame_start_col)
@@ -74,19 +74,31 @@ class Frame:
         self.window.refresh()
 
 #==============================================================================
-# The Editor class displays the document
+# The EditBox class is basically a fancy window that supports a wider variety
+# of keypresses. Text is stored internally in a Document object.
 #==============================================================================
 
-class Editor:
-    def __init__(self, layout, logger=None):
-        self.document = evdoc.core.Document()
-        self.logger = logger
-        self.layout = layout
-        self.window = curses.newwin(
-            layout.editor_rows, layout.editor_cols,
-            layout.editor_start_row, layout.editor_start_col)
+class EditBox(object):
+    def __init__(self, rows, cols, start_row, start_col, logger=None):
+        self.document  = evdoc.core.Document()
+        self.rows      = rows
+        self.cols      = cols
+        self.start_row = start_row
+        self.start_col = start_col
+        self.logger    = logger
+        self.window    = curses.newwin(rows, cols, start_row, start_col)
         self.window.keypad(1)
         self._update_cursor()
+
+    def clear(self):
+        "Clear the editbox of all contents and redraw it"
+        self.document.clear()
+        self.window.clear()
+        self.window.refresh()
+
+    def contents(self):
+        "Get the contents of the EditBox, as a string"
+        return "\n".join(self.document.lines)
 
     def getch(self):
         "Get a single character from the user"
@@ -105,12 +117,17 @@ class Editor:
         "Delete the character at the cursor. Does not redraw."
         self.document.delete()
 
+    def focus(self):
+        "Move focus to this window"
+        self.window.refresh()
+
     def redraw(self):
+        "Redraw all contents of the window and move focus to it"
         self.window.clear()
 
         # Draw the last N messages, where N is the number of visible rows
         row = 0
-        for line in self.document.lines[0:self.layout.editor_rows]:
+        for line in self.document.lines[0:self.rows]:
             self.window.addstr(row, 0, line)
             row += 1
 
@@ -192,34 +209,31 @@ class Editor:
             #self.log("doc: (%d, %d)  win: (%d, %d)\n" % (doc_y, doc_x, win_y, win_x))
 
 #==============================================================================
+# The Editor class displays the document
+#==============================================================================
+
+class Editor(EditBox):
+    def __init__(self, layout, logger=None):
+        super(evdoc.ui.Editor, self).__init__(
+            layout.editor_rows,
+            layout.editor_cols,
+            layout.editor_start_row,
+            layout.editor_start_col,
+            logger)
+        self.layout = layout
+
+#==============================================================================
 # The Prompt class allows the user to enter commands
 #==============================================================================
 
-class Prompt:
-    def __init__(self, layout):
-        self.layout = layout
-        self.window = curses.newwin(layout.prompt_rows, layout.prompt_cols,
-            layout.prompt_start_row, layout.prompt_start_col)
-        self.window.keypad(1)
-        self.window.addstr('> ')
+class Prompt(EditBox):
+    def __init__(self, layout, logger=None):
+        super(evdoc.ui.Prompt, self).__init__(
+            layout.prompt_rows,
+            layout.prompt_cols,
+            layout.prompt_start_row,
+            layout.prompt_start_col,
+            logger)
 
-    def move(self, y, x):
-        self.window.move(y, x)
-
-    def getch(self):
-        "Get a single character from the user"
-        return self.window.getch()
-
-    def getstr(self):
-        "Get an input string from the user"
-        return self.window.getstr()
-
-    def redraw(self):
-        "Redraw the prompt window"
-        self.window.refresh()
-
-    def reset(self):
-        "Reset the prompt to '> ' and redraw"
-        self.window.clear()
-        self.window.addstr('> ')
-        self.redraw()
+    def edit(self):
+        return super(Prompt, self).edit([curses.ascii.ESC, curses.ascii.LF])

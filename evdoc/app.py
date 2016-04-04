@@ -6,7 +6,7 @@ import os
 # A simple logger class
 #==============================================================================
 
-class Logger:
+class Logger(object):
     DEFAULT_FILE = 'debug.log'
 
     def __init__(self, file=None):
@@ -25,7 +25,7 @@ class Logger:
 # The App class contains all low-level UI classes, plus the main runtime loop.
 #==============================================================================
 
-class App:
+class App(object):
     running = False
 
     def __init__(self):
@@ -79,22 +79,23 @@ class App:
             self.title = evdoc.ui.Title(self.layout, evdoc.TITLE)
             self.frame = evdoc.ui.Frame(self.layout)
             self.editor = evdoc.ui.Editor(self.layout, self.logger)
-            self.prompt = evdoc.ui.Prompt(self.layout)
+            self.prompt = evdoc.ui.Prompt(self.layout, self.logger)
             self.redraw()
 
             # Run the main loop
+            # TODO: Clean up this while-loop. Too much nesting.
             while True:
+                self.editor.focus()
                 c = self.editor.edit()
 
                 if c == curses.ascii.ESC:
-                    self.logger.log("char: ESC")
-                    self.prompt.reset()
-                    curses.echo()
-                    s = self.prompt.getstr()
-                    self.logger.log("From prompt: " + s)
-                    curses.noecho()
-                    self.prompt.reset()
-                    self.editor.redraw()
+                    self.prompt.focus()
+                    c = self.prompt.edit()
+                    if c == curses.ascii.ESC:
+                        pass
+                    elif c == curses.ascii.LF:
+                        self.logger.log("From prompt: " + self.prompt.contents())
+                        self.prompt.clear()
 
         # Ignore keyboard interrupts and exit cleanly
         except KeyboardInterrupt:
