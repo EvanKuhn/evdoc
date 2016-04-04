@@ -85,6 +85,7 @@ class Editor:
     def addch(self, c):
         "Append a character to the editor. Does not redraw."
         self.document.addch(c)
+        self._update_cursor()
 
     def backspace(self):
         "Delete the character to the left of the cursor. Does not redraw."
@@ -149,6 +150,9 @@ class Prompt:
             layout.prompt_start_row, layout.prompt_start_col)
         self.window.keypad(1)
         self.window.addstr('> ')
+
+    def move(self, y, x):
+        self.window.move(y, x)
 
     def getch(self):
         "Get a single character from the user"

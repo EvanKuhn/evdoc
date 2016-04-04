@@ -11,6 +11,7 @@ class App:
     def __init__(self):
         self.layout = evdoc.ui.Layout()
         self.screen = None
+        self.logfile = open('debug.log', 'w', 0)
 
     def _start_curses(self):
         "Start curses, and initialize the `screen` class variable"
@@ -18,6 +19,7 @@ class App:
             raise StandardError("Curses is already running")
         self.screen = curses.initscr()
         curses.cbreak()
+        curses.noecho()
         self.screen.keypad(1)
         App.running = True
 
@@ -26,6 +28,7 @@ class App:
         if not App.running:
             raise StandardError("Curses is not running")
         curses.nocbreak()
+        curses.echo()
         self.screen.keypad(0)
         self.screen = None
         curses.endwin()
@@ -43,8 +46,6 @@ class App:
         "Initialize curses, draw the UI, and start the main loop"
         input = ''
 
-        debug = open('debug.log', 'w')
-
         try:
             # Start curses and initialize all curses-based objects
             self._start_curses()
@@ -57,11 +58,14 @@ class App:
             while True:
                 # Get input
                 c = self.editor.getch()
+                self.log("char: %d\n" % c)
 
                 # Take action
-                if c == ord("\n"):
+                if c == curses.ascii.LF:
                     self.editor.addch(c)
                     self.editor.redraw()
+                elif c == curses.ascii.TAB:
+                    pass
                 elif curses.ascii.isprint(c):
                     self.editor.addch(c)
                     self.editor.redraw_current_line()
@@ -82,14 +86,18 @@ class App:
                     self.editor.delete()
                     self.editor.redraw()
                 elif c == curses.ascii.ESC:
-                    pass #TODO
+                    # Get the string from the user, then move back to the editor.
+                    self.prompt.reset()
+                    curses.echo()
+                    s = self.prompt.getstr()
+                    curses.noecho()
+                    self.prompt.reset()
+                    self.editor.redraw()
 
                 # Debug output
-                win_y, win_x = self.editor.window.getyx()
-                doc_y, doc_x = self.editor.document.getyx()
-                debug.write("char: %d\n" % c)
-                #debug.write("doc: (%d, %d)  win: (%d, %d)\n" % (doc_y, doc_x, win_y, win_x))
-                debug.flush()
+                #win_y, win_x = self.editor.window.getyx()
+                #doc_y, doc_x = self.editor.document.getyx()
+                #self.log("doc: (%d, %d)  win: (%d, %d)\n" % (doc_y, doc_x, win_y, win_x))
 
         # Ignore keyboard interrupts and exit cleanly
         except KeyboardInterrupt:
@@ -102,9 +110,14 @@ class App:
         # Stop curses before we exit
         finally:
             self.stop()
-            debug.close()
+            self.logfile.close()
 
     def stop(self):
         "Stop curses and stop the app. You must call this before exiting."
         if evdoc.app.App.running:
             self._stop_curses()
+
+    def log(self, str):
+        "Log the string to the debug log file"
+        self.logfile.write(str)
+        self.logfile.flush()

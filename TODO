@@ -1,0 +1,9 @@
+TODO:
+[ ] Allow ESC to move between editor and command prompt
+[ ] Commands to move forward/back by word, or to front/back of line
+[ ] Accept basic commands
+[ ] Save and load files
+[ ] Help text
+[ ] Configuration?
+[ ] Colored text for .md files
+[ ] Syntax highlighting? (lots of work...)
