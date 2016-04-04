@@ -1,5 +1,6 @@
 import curses
 import evdoc
+import os
 
 #==============================================================================
 # The App class contains all low-level UI classes, plus the main runtime loop.
@@ -17,6 +18,10 @@ class App:
         "Start curses, and initialize the `screen` class variable"
         if App.running:
             raise StandardError("Curses is already running")
+        # Fix stupidly long delay on the Escape key
+        # http://stackoverflow.com/questions/27372068/
+        os.environ.setdefault('ESCDELAY', '25')
+        # Now initialize curses
         self.screen = curses.initscr()
         curses.cbreak()
         curses.noecho()
