@@ -1,4 +1,5 @@
 import curses
+import curses.ascii
 import os
 import evdoc
 
@@ -77,9 +78,9 @@ class Frame:
 #==============================================================================
 
 class Editor:
-    def __init__(self, layout):
+    def __init__(self, layout, logger=None):
         self.document = evdoc.core.Document()
-        # UI objects
+        self.logger = logger
         self.layout = layout
         self.window = curses.newwin(
             layout.editor_rows, layout.editor_cols,
@@ -145,6 +146,50 @@ class Editor:
         "Update the window cursor based on the document cursor"
         y, x = self.document.getyx()
         self.window.move(y, x)
+
+    def edit(self, terminators=[curses.ascii.ESC]):
+        '''
+        Collect input keystrokes from the user. When a given terminator character
+        is received, stop and return it. Ignores the Escape character.
+        '''
+        while True:
+            # Get input
+            c = self.getch()
+            self.logger.log("char: %d" % c)
+
+            if c in terminators:
+                return c
+
+            # Take action
+            if c == curses.ascii.LF:
+                self.addch(c)
+                self.redraw()
+            elif c == curses.ascii.TAB:
+                pass
+            elif curses.ascii.isprint(c):
+                self.addch(c)
+                self.redraw_current_line()
+            elif c == curses.KEY_UP:
+                self.move_up()
+            elif c == curses.KEY_DOWN:
+                self.move_down()
+            elif c == curses.KEY_LEFT:
+                self.move_left()
+            elif c == curses.KEY_RIGHT:
+                self.move_right()
+            elif c == curses.KEY_RESIZE:
+                self.redraw()
+            elif c == curses.ascii.DEL:
+                self.backspace()
+                self.redraw()
+            elif c == curses.KEY_DC:
+                self.delete()
+                self.redraw()
+
+            # Debug output
+            #win_y, win_x = self.window.getyx()
+            #doc_y, doc_x = self.document.getyx()
+            #self.log("doc: (%d, %d)  win: (%d, %d)\n" % (doc_y, doc_x, win_y, win_x))
 
 #==============================================================================
 # The Prompt class allows the user to enter commands
