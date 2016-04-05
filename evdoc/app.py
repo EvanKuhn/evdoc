@@ -69,6 +69,14 @@ class App(object):
         self.frame.redraw()
         self.editor.redraw()
 
+    def resize(self):
+        "Update the UI based on a terminal resize"
+        self.layout.update()
+        self.title.resize(self.layout)
+        self.prompt.resize(self.layout)
+        self.frame.resize(self.layout)
+        self.editor.resize(self.layout)
+
     def start(self):
         "Initialize curses, draw the UI, and start the main loop"
         input = ''
@@ -88,10 +96,14 @@ class App(object):
                 self.editor.focus()
                 c = self.editor.edit()
 
-                if c == curses.ascii.ESC:
+                if c == curses.KEY_RESIZE:
+                    self.resize()
+                elif c == curses.ascii.ESC:
                     self.prompt.focus()
                     c = self.prompt.edit()
-                    if c == curses.ascii.ESC:
+                    if c == curses.KEY_RESIZE:
+                        self.resize()
+                    elif c == curses.ascii.ESC:
                         pass
                     elif c == curses.ascii.LF:
                         self.logger.log("From prompt: " + self.prompt.contents())

@@ -13,6 +13,10 @@ class Layout(object):
 
     def __init__(self):
         "Determine the terminal size, and size of each window"
+        self.update()
+
+    def update(self):
+        "Update the terminal size, and size of each window"
         rows, cols = Layout.terminal_size()
 
         # Save terminal size
@@ -52,13 +56,28 @@ class Layout(object):
 
 class Title(object):
     def __init__(self, layout, text):
+        self.layout = layout
+        self.text = text
         self.window = curses.newwin(layout.title_rows, layout.title_cols,
             layout.title_start_row, layout.title_start_col)
-        start_col = (layout.title_cols - len(text)) / 2
-        self.window.addstr(0, start_col, text, curses.A_BOLD)
+        self._update()
 
     def redraw(self):
+        "Redraw the title window"
         self.window.refresh()
+
+    def resize(self, layout):
+        "Update the window size"
+        self.layout = layout
+        self._update()
+
+    def _update(self):
+        "Set the window's contents"
+        self.window.resize(self.layout.title_rows, self.layout.title_cols)
+        start_col = (self.layout.title_cols - len(self.text)) / 2
+        self.window.clear()
+        self.window.addstr(0, start_col, self.text, curses.A_BOLD)
+        self.redraw()
 
 #==============================================================================
 # The Frame simply draws a frame (around the editor)
@@ -66,12 +85,24 @@ class Title(object):
 
 class Frame(object):
     def __init__(self, layout):
+        self.layout = layout
         self.window = curses.newwin(layout.frame_rows, layout.frame_cols,
             layout.frame_start_row, layout.frame_start_col)
 
     def redraw(self):
+        "Redraw the frame window"
         self.window.border()
         self.window.refresh()
+
+    def resize(self, layout):
+        "Update the window size"
+        self.layout = layout
+        self._update()
+
+    def _update(self):
+        "Set the window's contents"
+        self.window.resize(self.layout.frame_rows, self.layout.frame_cols)
+        self.redraw()
 
 #==============================================================================
 # The EditBox class is basically a fancy window that supports a wider variety
@@ -80,15 +111,22 @@ class Frame(object):
 
 class EditBox(object):
     def __init__(self, rows, cols, start_row, start_col, logger=None):
-        self.document  = evdoc.core.Document()
+        self.document = evdoc.core.Document()
+        self.logger   = logger
+        self.window   = curses.newwin(rows, cols, start_row, start_col)
+        self._resize(rows, cols, start_row, start_col)
+
+    def _resize(self, rows, cols, start_row, start_col):
+        "Update the window size"
         self.rows      = rows
         self.cols      = cols
         self.start_row = start_row
         self.start_col = start_col
-        self.logger    = logger
-        self.window    = curses.newwin(rows, cols, start_row, start_col)
+        self.window.resize(rows, cols)
+        self.window.mvwin(start_row, start_col)
         self.window.keypad(1)
         self._update_cursor()
+        self.redraw()
 
     def clear(self):
         "Clear the editbox of all contents and redraw it"
@@ -167,7 +205,9 @@ class EditBox(object):
     def edit(self, terminators=[curses.ascii.ESC]):
         '''
         Collect input keystrokes from the user. When a given terminator character
-        is received, stop and return it. Ignores the Escape character.
+        is received, stop and return it.
+        - Always ignores the Escape character.
+        - Always returns a KEY_RESIZE character.
         '''
         while True:
             # Get input
@@ -175,6 +215,8 @@ class EditBox(object):
             self.logger.log("char: %d" % c)
 
             if c in terminators:
+                return c
+            if c == curses.KEY_RESIZE:
                 return c
 
             # Take action
@@ -194,8 +236,6 @@ class EditBox(object):
                 self.move_left()
             elif c == curses.KEY_RIGHT:
                 self.move_right()
-            elif c == curses.KEY_RESIZE:
-                self.redraw()
             elif c == curses.ascii.DEL:
                 self.backspace()
                 self.redraw()
@@ -214,13 +254,22 @@ class EditBox(object):
 
 class Editor(EditBox):
     def __init__(self, layout, logger=None):
+        self.layout = layout
         super(evdoc.ui.Editor, self).__init__(
             layout.editor_rows,
             layout.editor_cols,
             layout.editor_start_row,
             layout.editor_start_col,
             logger)
+
+    def resize(self, layout):
+        "Update the window size"
         self.layout = layout
+        super(evdoc.ui.Editor, self)._resize(
+            layout.editor_rows,
+            layout.editor_cols,
+            layout.editor_start_row,
+            layout.editor_start_col)
 
 #==============================================================================
 # The Prompt class allows the user to enter commands
@@ -228,6 +277,7 @@ class Editor(EditBox):
 
 class Prompt(EditBox):
     def __init__(self, layout, logger=None):
+        self.layout = layout
         super(evdoc.ui.Prompt, self).__init__(
             layout.prompt_rows,
             layout.prompt_cols,
@@ -235,5 +285,15 @@ class Prompt(EditBox):
             layout.prompt_start_col,
             logger)
 
+    def resize(self, layout):
+        "Update the window size"
+        self.layout = layout
+        super(evdoc.ui.Prompt, self)._resize(
+            layout.prompt_rows,
+            layout.prompt_cols,
+            layout.prompt_start_row,
+            layout.prompt_start_col)
+
     def edit(self):
+        "Get user input from the prompt. Returns the terminator character typed."
         return super(Prompt, self).edit([curses.ascii.ESC, curses.ascii.LF])
