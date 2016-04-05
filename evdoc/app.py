@@ -47,6 +47,7 @@ class App(object):
         curses.cbreak()
         curses.noecho()
         self.screen.keypad(1)
+        curses.mousemask(curses.ALL_MOUSE_EVENTS)
         App.running = True
 
     def _stop_curses(self):

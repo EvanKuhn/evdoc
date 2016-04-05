@@ -8,13 +8,19 @@ TODO:
 [ ] Configuration?
 [ ] Colored text for .md files
 [ ] Syntax highlighting? (lots of work...)
-[ ] Can we handle mouse events via curses.getmouse()?
+[ ] Handle mouse events
 
 DONE
 [X] Have both Editor and Prompt derive from common class using Editor logic
 [X] Have all classes derive from object
 [X] Allow ESC to move between editor and command prompt
 
+
+MOUSE EVENTS
+------------
+5 actions:        down, up, click, double-click, triple-click
+4 modifiers:      normal, shift, command, shift+command
+20 total events:  5 events * 4 modifiers = 20 events
 
 
 

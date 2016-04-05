@@ -271,7 +271,9 @@ class EditBox(AppWindow):
                 self.update()
                 self.window.refresh()
             elif c == curses.KEY_MOUSE:
-                self.logger.log("Got mouse event")
+                id, x, y, z, bstate = curses.getmouse()
+                self.logger.log("Mouse event: id=%d, x=%d, y=%d, z=%d, bstate=%d" %
+                    (id, x, y, z, bstate))
 
             # Debug output
             #win_y, win_x = self.window.getyx()
