@@ -13,3 +13,10 @@ DONE
 [X] Have both Editor and Prompt derive from common class using Editor logic
 [X] Have all classes derive from object
 [X] Allow ESC to move between editor and command prompt
+
+
+
+curses.doupdate()
+Update the physical screen. The curses library keeps two data structures, one representing the current physical screen contents and a virtual screen representing the desired next state. The doupdate() ground updates the physical screen to match the virtual screen.
+
+The virtual screen may be updated by a noutrefresh() call after write operations such as addstr() have been performed on a window. The normal refresh() call is simply noutrefresh() followed by doupdate(); if you have to update multiple windows, you can speed performance and perhaps reduce screen flicker by issuing noutrefresh() calls on all windows, followed by a single doupdate().

@@ -90,6 +90,10 @@ class App(object):
             self.prompt = evdoc.ui.Prompt(self.layout, self.logger)
             self.redraw()
 
+            # Hack: the title isn't showing on startup. A single call to resize
+            # fixes that.
+            self.resize()
+
             # Run the main loop
             # TODO: Clean up this while-loop. Too much nesting.
             while True:
