@@ -60,27 +60,23 @@ class Title(object):
         self.text = text
         self.window = curses.newwin(layout.title_rows, layout.title_cols,
             layout.title_start_row, layout.title_start_col)
-        self._update()
+        self.update()
 
-    def noutrefresh(self):
+    def update(self):
         '''
-        Mark the window as refreshed, but wait for a call to curses.doupdate()
-        to update the physical screen.
+        Update the window's contents. The window will not be redrawn until
+        curses.doupdate() is called.
         '''
+        self.window.resize(self.layout.title_rows, self.layout.title_cols)
+        start_col = (self.layout.title_cols - len(self.text)) / 2
+        self.window.clear()
+        self.window.addstr(0, start_col, self.text, curses.A_BOLD)
         self.window.noutrefresh()
 
     def resize(self, layout):
         "Update the window size"
         self.layout = layout
-        self._update()
-
-    def _update(self):
-        "Set the window's contents"
-        self.window.resize(self.layout.title_rows, self.layout.title_cols)
-        start_col = (self.layout.title_cols - len(self.text)) / 2
-        self.window.clear()
-        self.window.addstr(0, start_col, self.text, curses.A_BOLD)
-        self.noutrefresh()
+        self.update()
 
 #==============================================================================
 # The Frame simply draws a frame (around the editor)
@@ -92,23 +88,19 @@ class Frame(object):
         self.window = curses.newwin(layout.frame_rows, layout.frame_cols,
             layout.frame_start_row, layout.frame_start_col)
 
-    def noutrefresh(self):
+    def update(self):
         '''
-        Mark the window as refreshed, but wait for a call to curses.doupdate()
-        to update the physical screen.
+        Update the window's contents. The window will not be redrawn until
+        curses.doupdate() is called.
         '''
+        self.window.resize(self.layout.frame_rows, self.layout.frame_cols)
         self.window.border()
         self.window.noutrefresh()
 
     def resize(self, layout):
         "Update the window size"
         self.layout = layout
-        self._update()
-
-    def _update(self):
-        "Set the window's contents"
-        self.window.resize(self.layout.frame_rows, self.layout.frame_cols)
-        self.noutrefresh()
+        self.update()
 
 #==============================================================================
 # The EditBox class is basically a fancy window that supports a wider variety
@@ -127,28 +119,45 @@ class EditBox(object):
         self.window.keypad(1)
         self._resize(rows, cols, start_row, start_col)
 
+    def update(self):
+        '''
+        Repopulate all contents of the window and move focus to it. The window
+        will not be redrawn until curses.doupdate() is called.
+        '''
+        self.window.clear()
+
+        # Draw the last N messages, where N is the number of visible rows
+        row = 0
+        for line in self.document.lines[0:self.rows]:
+            self.window.addstr(row, 0, line)
+            row += 1
+
+        # Update the cursor and refresh
+        self._update_cursor()
+        self.window.noutrefresh()
+
     def _resize(self, rows, cols, start_row, start_col):
         '''
         Update the window size. The window will not be redrawn until
         curses.doupdate() is called.
         '''
-        refresh = False
+        changed = False
 
         if self.rows != rows or self.cols != cols:
             self.rows = rows
             self.cols = cols
             self.window.resize(rows, cols)
-            refresh = True
+            changed = True
 
         if self.start_row != start_row or self.start_col != start_col:
             self.start_row = start_row
             self.start_col = start_col
             self.logger.log("mvwin(%d, %d)" % (start_row, start_col))
             self.window.mvwin(start_row, start_col)
-            refresh = True
+            changed = True
 
-        if refresh:
-            self.noutrefresh()
+        if changed:
+            self.update()
 
     def clear(self):
         "Clear the editbox of all contents and redraw it"
@@ -181,30 +190,14 @@ class EditBox(object):
         "Move focus to this window"
         self.window.refresh()
 
-    def noutrefresh(self):
-        '''
-        Repopulate all contents of the window and move focus to it. The window
-        will not be redrawn until curses.doupdate() is called.
-        '''
-        self.window.clear()
-
-        # Draw the last N messages, where N is the number of visible rows
-        row = 0
-        for line in self.document.lines[0:self.rows]:
-            self.window.addstr(row, 0, line)
-            row += 1
-
-        # Update the cursor and refresh
-        self._update_cursor()
-        self.window.noutrefresh()
-
     def redraw_current_line(self):
+        "Redraw the current line"
         y, x = self.window.getyx()
         line = self.document.lines[y]
         self.window.addstr(y, 0, line)
         self.window.redrawln(y, 0)
         self.window.move(y, x)
-        self.window.refresh()
+        self.window.refresh()  # TODO needed???
 
     def move_up(self):
         self.document.move_up()
@@ -247,7 +240,7 @@ class EditBox(object):
             # Take action
             if c == curses.ascii.LF:
                 self.addch(c)
-                self.noutrefresh()
+                self.update()
                 self.window.refresh()
             elif c == curses.ascii.TAB:
                 pass
@@ -264,11 +257,11 @@ class EditBox(object):
                 self.move_right()
             elif c == curses.ascii.DEL:
                 self.backspace()
-                self.noutrefresh()
+                self.update()
                 self.window.refresh()
             elif c == curses.KEY_DC:
                 self.delete()
-                self.noutrefresh()
+                self.update()
                 self.window.refresh()
 
             # Debug output
