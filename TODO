@@ -8,6 +8,7 @@ TODO:
 [ ] Configuration?
 [ ] Colored text for .md files
 [ ] Syntax highlighting? (lots of work...)
+[ ] Can we handle mouse events via curses.getmouse()?
 
 DONE
 [X] Have both Editor and Prompt derive from common class using Editor logic

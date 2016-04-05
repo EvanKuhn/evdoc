@@ -51,10 +51,19 @@ class Layout(object):
         return (int(rows), int(cols))
 
 #==============================================================================
+# Base window object for the app
+#==============================================================================
+
+class AppWindow(object):
+    def redraw(self):
+        "Redraw the window (ie. physically update the screen)"
+        self.window.refresh()
+
+#==============================================================================
 # This just displays the title
 #==============================================================================
 
-class Title(object):
+class Title(AppWindow):
     def __init__(self, layout, text):
         self.layout = layout
         self.text = text
@@ -82,7 +91,7 @@ class Title(object):
 # The Frame simply draws a frame (around the editor)
 #==============================================================================
 
-class Frame(object):
+class Frame(AppWindow):
     def __init__(self, layout):
         self.layout = layout
         self.window = curses.newwin(layout.frame_rows, layout.frame_cols,
@@ -107,7 +116,7 @@ class Frame(object):
 # of keypresses. Text is stored internally in a Document object.
 #==============================================================================
 
-class EditBox(object):
+class EditBox(AppWindow):
     def __init__(self, rows, cols, start_row, start_col, logger=None):
         self.document  = evdoc.core.Document()
         self.logger    = logger
@@ -152,7 +161,6 @@ class EditBox(object):
         if self.start_row != start_row or self.start_col != start_col:
             self.start_row = start_row
             self.start_col = start_col
-            self.logger.log("mvwin(%d, %d)" % (start_row, start_col))
             self.window.mvwin(start_row, start_col)
             changed = True
 
@@ -163,7 +171,7 @@ class EditBox(object):
         "Clear the editbox of all contents and redraw it"
         self.document.clear()
         self.window.clear()
-        self.window.refresh()
+        self.window.refresh()   #TODO: do not redraw automatically (?)
 
     def contents(self):
         "Get the contents of the EditBox, as a string"
@@ -197,7 +205,6 @@ class EditBox(object):
         self.window.addstr(y, 0, line)
         self.window.redrawln(y, 0)
         self.window.move(y, x)
-        self.window.refresh()  # TODO needed???
 
     def move_up(self):
         self.document.move_up()
@@ -230,7 +237,7 @@ class EditBox(object):
         while True:
             # Get input
             c = self.getch()
-            self.logger.log("char: %d" % c)
+            #self.logger.log("char: %d" % c)
 
             if c in terminators:
                 return c
@@ -263,6 +270,8 @@ class EditBox(object):
                 self.delete()
                 self.update()
                 self.window.refresh()
+            elif c == curses.KEY_MOUSE:
+                self.logger.log("Got mouse event")
 
             # Debug output
             #win_y, win_x = self.window.getyx()

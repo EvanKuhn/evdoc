@@ -72,6 +72,7 @@ class App(object):
     def resize(self):
         "Update the UI based on a terminal resize"
         self.layout.update()
+        self.logger.log("Resize to %d x %d" % (self.layout.terminal_cols, self.layout.terminal_rows))
         self.title.resize(self.layout)
         self.prompt.resize(self.layout)
         self.frame.resize(self.layout)
