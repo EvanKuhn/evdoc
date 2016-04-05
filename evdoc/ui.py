@@ -13,6 +13,10 @@ class Layout(object):
 
     def __init__(self):
         "Determine the terminal size, and size of each window"
+        self.update()
+
+    def update(self):
+        "Update the terminal size, and size of each window"
         rows, cols = Layout.terminal_size()
 
         # Save terminal size
@@ -47,54 +51,127 @@ class Layout(object):
         return (int(rows), int(cols))
 
 #==============================================================================
+# Base window object for the app
+#==============================================================================
+
+class AppWindow(object):
+    def redraw(self):
+        "Redraw the window (ie. physically update the screen)"
+        self.window.refresh()
+
+#==============================================================================
 # This just displays the title
 #==============================================================================
 
-class Title(object):
+class Title(AppWindow):
     def __init__(self, layout, text):
+        self.layout = layout
+        self.text = text
         self.window = curses.newwin(layout.title_rows, layout.title_cols,
             layout.title_start_row, layout.title_start_col)
-        start_col = (layout.title_cols - len(text)) / 2
-        self.window.addstr(0, start_col, text, curses.A_BOLD)
+        self.update()
 
-    def redraw(self):
-        self.window.refresh()
+    def update(self):
+        '''
+        Update the window's contents. The window will not be redrawn until
+        curses.doupdate() is called.
+        '''
+        self.window.resize(self.layout.title_rows, self.layout.title_cols)
+        start_col = (self.layout.title_cols - len(self.text)) / 2
+        self.window.clear()
+        self.window.addstr(0, start_col, self.text, curses.A_BOLD)
+        self.window.noutrefresh()
+
+    def resize(self, layout):
+        "Update the window size"
+        self.layout = layout
+        self.update()
 
 #==============================================================================
 # The Frame simply draws a frame (around the editor)
 #==============================================================================
 
-class Frame(object):
+class Frame(AppWindow):
     def __init__(self, layout):
+        self.layout = layout
         self.window = curses.newwin(layout.frame_rows, layout.frame_cols,
             layout.frame_start_row, layout.frame_start_col)
 
-    def redraw(self):
+    def update(self):
+        '''
+        Update the window's contents. The window will not be redrawn until
+        curses.doupdate() is called.
+        '''
+        self.window.resize(self.layout.frame_rows, self.layout.frame_cols)
         self.window.border()
-        self.window.refresh()
+        self.window.noutrefresh()
+
+    def resize(self, layout):
+        "Update the window size"
+        self.layout = layout
+        self.update()
 
 #==============================================================================
 # The EditBox class is basically a fancy window that supports a wider variety
 # of keypresses. Text is stored internally in a Document object.
 #==============================================================================
 
-class EditBox(object):
+class EditBox(AppWindow):
     def __init__(self, rows, cols, start_row, start_col, logger=None):
         self.document  = evdoc.core.Document()
+        self.logger    = logger
         self.rows      = rows
         self.cols      = cols
         self.start_row = start_row
         self.start_col = start_col
-        self.logger    = logger
         self.window    = curses.newwin(rows, cols, start_row, start_col)
         self.window.keypad(1)
+        self._resize(rows, cols, start_row, start_col)
+
+    def update(self):
+        '''
+        Repopulate all contents of the window and move focus to it. The window
+        will not be redrawn until curses.doupdate() is called.
+        '''
+        self.window.clear()
+
+        # Draw the last N messages, where N is the number of visible rows
+        row = 0
+        for line in self.document.lines[0:self.rows]:
+            self.window.addstr(row, 0, line)
+            row += 1
+
+        # Update the cursor and refresh
         self._update_cursor()
+        self.window.noutrefresh()
+
+    def _resize(self, rows, cols, start_row, start_col):
+        '''
+        Update the window size. The window will not be redrawn until
+        curses.doupdate() is called.
+        '''
+        changed = False
+
+        if self.rows != rows or self.cols != cols:
+            self.rows = rows
+            self.cols = cols
+            self.window.resize(rows, cols)
+            changed = True
+
+        if self.start_row != start_row or self.start_col != start_col:
+            self.start_row = start_row
+            self.start_col = start_col
+            self.window.mvwin(start_row, start_col)
+            changed = True
+
+        if changed:
+            self.update()
 
     def clear(self):
         "Clear the editbox of all contents and redraw it"
         self.document.clear()
         self.window.clear()
-        self.window.refresh()
+        self.window.refresh()   #TODO: do not redraw automatically (?)
 
     def contents(self):
         "Get the contents of the EditBox, as a string"
@@ -121,27 +198,13 @@ class EditBox(object):
         "Move focus to this window"
         self.window.refresh()
 
-    def redraw(self):
-        "Redraw all contents of the window and move focus to it"
-        self.window.clear()
-
-        # Draw the last N messages, where N is the number of visible rows
-        row = 0
-        for line in self.document.lines[0:self.rows]:
-            self.window.addstr(row, 0, line)
-            row += 1
-
-        # Update the cursor and refresh
-        self._update_cursor()
-        self.window.refresh()
-
     def redraw_current_line(self):
+        "Redraw the current line"
         y, x = self.window.getyx()
         line = self.document.lines[y]
         self.window.addstr(y, 0, line)
         self.window.redrawln(y, 0)
         self.window.move(y, x)
-        self.window.refresh()
 
     def move_up(self):
         self.document.move_up()
@@ -167,20 +230,25 @@ class EditBox(object):
     def edit(self, terminators=[curses.ascii.ESC]):
         '''
         Collect input keystrokes from the user. When a given terminator character
-        is received, stop and return it. Ignores the Escape character.
+        is received, stop and return it.
+        - Always ignores the Escape character.
+        - Always returns a KEY_RESIZE character.
         '''
         while True:
             # Get input
             c = self.getch()
-            self.logger.log("char: %d" % c)
+            #self.logger.log("char: %d" % c)
 
             if c in terminators:
+                return c
+            if c == curses.KEY_RESIZE:
                 return c
 
             # Take action
             if c == curses.ascii.LF:
                 self.addch(c)
-                self.redraw()
+                self.update()
+                self.window.refresh()
             elif c == curses.ascii.TAB:
                 pass
             elif curses.ascii.isprint(c):
@@ -194,14 +262,18 @@ class EditBox(object):
                 self.move_left()
             elif c == curses.KEY_RIGHT:
                 self.move_right()
-            elif c == curses.KEY_RESIZE:
-                self.redraw()
             elif c == curses.ascii.DEL:
                 self.backspace()
-                self.redraw()
+                self.update()
+                self.window.refresh()
             elif c == curses.KEY_DC:
                 self.delete()
-                self.redraw()
+                self.update()
+                self.window.refresh()
+            elif c == curses.KEY_MOUSE:
+                id, x, y, z, bstate = curses.getmouse()
+                self.logger.log("Mouse event: id=%d, x=%d, y=%d, z=%d, bstate=%d" %
+                    (id, x, y, z, bstate))
 
             # Debug output
             #win_y, win_x = self.window.getyx()
@@ -214,13 +286,22 @@ class EditBox(object):
 
 class Editor(EditBox):
     def __init__(self, layout, logger=None):
+        self.layout = layout
         super(evdoc.ui.Editor, self).__init__(
             layout.editor_rows,
             layout.editor_cols,
             layout.editor_start_row,
             layout.editor_start_col,
             logger)
+
+    def resize(self, layout):
+        "Update the window size"
         self.layout = layout
+        super(evdoc.ui.Editor, self)._resize(
+            layout.editor_rows,
+            layout.editor_cols,
+            layout.editor_start_row,
+            layout.editor_start_col)
 
 #==============================================================================
 # The Prompt class allows the user to enter commands
@@ -228,6 +309,7 @@ class Editor(EditBox):
 
 class Prompt(EditBox):
     def __init__(self, layout, logger=None):
+        self.layout = layout
         super(evdoc.ui.Prompt, self).__init__(
             layout.prompt_rows,
             layout.prompt_cols,
@@ -235,5 +317,15 @@ class Prompt(EditBox):
             layout.prompt_start_col,
             logger)
 
+    def resize(self, layout):
+        "Update the window size"
+        self.layout = layout
+        super(evdoc.ui.Prompt, self)._resize(
+            layout.prompt_rows,
+            layout.prompt_cols,
+            layout.prompt_start_row,
+            layout.prompt_start_col)
+
     def edit(self):
+        "Get user input from the prompt. Returns the terminator character typed."
         return super(Prompt, self).edit([curses.ascii.ESC, curses.ascii.LF])

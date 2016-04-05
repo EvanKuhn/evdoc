@@ -47,6 +47,7 @@ class App(object):
         curses.cbreak()
         curses.noecho()
         self.screen.keypad(1)
+        curses.mousemask(curses.ALL_MOUSE_EVENTS)
         App.running = True
 
     def _stop_curses(self):
@@ -63,11 +64,20 @@ class App(object):
     def redraw(self):
         "Redraw all windows"
         # Note: the cursor shows up in the last window that is redrawn
-        self.screen.refresh()
-        self.title.redraw()
-        self.prompt.redraw()
-        self.frame.redraw()
-        self.editor.redraw()
+        self.title.update()
+        self.frame.update()
+        self.editor.update()
+        self.prompt.update()
+        curses.doupdate()
+
+    def resize(self):
+        "Update the UI based on a terminal resize"
+        self.layout.update()
+        self.logger.log("Resize to %d x %d" % (self.layout.terminal_cols, self.layout.terminal_rows))
+        self.title.resize(self.layout)
+        self.prompt.resize(self.layout)
+        self.frame.resize(self.layout)
+        self.editor.resize(self.layout)
 
     def start(self):
         "Initialize curses, draw the UI, and start the main loop"
@@ -82,16 +92,24 @@ class App(object):
             self.prompt = evdoc.ui.Prompt(self.layout, self.logger)
             self.redraw()
 
+            # Hack: the title isn't showing on startup. A single call to resize
+            # fixes that.
+            self.resize()
+
             # Run the main loop
             # TODO: Clean up this while-loop. Too much nesting.
             while True:
                 self.editor.focus()
                 c = self.editor.edit()
 
-                if c == curses.ascii.ESC:
+                if c == curses.KEY_RESIZE:
+                    self.resize()
+                elif c == curses.ascii.ESC:
                     self.prompt.focus()
                     c = self.prompt.edit()
-                    if c == curses.ascii.ESC:
+                    if c == curses.KEY_RESIZE:
+                        self.resize()
+                    elif c == curses.ascii.ESC:
                         pass
                     elif c == curses.ascii.LF:
                         self.logger.log("From prompt: " + self.prompt.contents())
