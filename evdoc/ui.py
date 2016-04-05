@@ -62,9 +62,12 @@ class Title(object):
             layout.title_start_row, layout.title_start_col)
         self._update()
 
-    def redraw(self):
-        "Redraw the title window"
-        self.window.refresh()
+    def noutrefresh(self):
+        '''
+        Mark the window as refreshed, but wait for a call to curses.doupdate()
+        to update the physical screen.
+        '''
+        self.window.noutrefresh()
 
     def resize(self, layout):
         "Update the window size"
@@ -77,7 +80,7 @@ class Title(object):
         start_col = (self.layout.title_cols - len(self.text)) / 2
         self.window.clear()
         self.window.addstr(0, start_col, self.text, curses.A_BOLD)
-        self.redraw()
+        self.noutrefresh()
 
 #==============================================================================
 # The Frame simply draws a frame (around the editor)
@@ -89,10 +92,13 @@ class Frame(object):
         self.window = curses.newwin(layout.frame_rows, layout.frame_cols,
             layout.frame_start_row, layout.frame_start_col)
 
-    def redraw(self):
-        "Redraw the frame window"
+    def noutrefresh(self):
+        '''
+        Mark the window as refreshed, but wait for a call to curses.doupdate()
+        to update the physical screen.
+        '''
         self.window.border()
-        self.window.refresh()
+        self.window.noutrefresh()
 
     def resize(self, layout):
         "Update the window size"
@@ -102,7 +108,7 @@ class Frame(object):
     def _update(self):
         "Set the window's contents"
         self.window.resize(self.layout.frame_rows, self.layout.frame_cols)
-        self.redraw()
+        self.noutrefresh()
 
 #==============================================================================
 # The EditBox class is basically a fancy window that supports a wider variety
@@ -118,24 +124,31 @@ class EditBox(object):
         self.start_row = start_row
         self.start_col = start_col
         self.window    = curses.newwin(rows, cols, start_row, start_col)
+        self.window.keypad(1)
         self._resize(rows, cols, start_row, start_col)
 
     def _resize(self, rows, cols, start_row, start_col):
-        "Update the window size"
+        '''
+        Update the window size. The window will not be redrawn until
+        curses.doupdate() is called.
+        '''
+        refresh = False
+
         if self.rows != rows or self.cols != cols:
             self.rows = rows
             self.cols = cols
             self.window.resize(rows, cols)
+            refresh = True
 
         if self.start_row != start_row or self.start_col != start_col:
             self.start_row = start_row
             self.start_col = start_col
             self.logger.log("mvwin(%d, %d)" % (start_row, start_col))
             self.window.mvwin(start_row, start_col)
+            refresh = True
 
-        self.window.keypad(1)
-        self._update_cursor()
-        self.redraw()
+        if refresh:
+            self.noutrefresh()
 
     def clear(self):
         "Clear the editbox of all contents and redraw it"
@@ -168,8 +181,11 @@ class EditBox(object):
         "Move focus to this window"
         self.window.refresh()
 
-    def redraw(self):
-        "Redraw all contents of the window and move focus to it"
+    def noutrefresh(self):
+        '''
+        Repopulate all contents of the window and move focus to it. The window
+        will not be redrawn until curses.doupdate() is called.
+        '''
         self.window.clear()
 
         # Draw the last N messages, where N is the number of visible rows
@@ -180,7 +196,7 @@ class EditBox(object):
 
         # Update the cursor and refresh
         self._update_cursor()
-        self.window.refresh()
+        self.window.noutrefresh()
 
     def redraw_current_line(self):
         y, x = self.window.getyx()
@@ -231,7 +247,8 @@ class EditBox(object):
             # Take action
             if c == curses.ascii.LF:
                 self.addch(c)
-                self.redraw()
+                self.noutrefresh()
+                self.window.refresh()
             elif c == curses.ascii.TAB:
                 pass
             elif curses.ascii.isprint(c):
@@ -247,10 +264,12 @@ class EditBox(object):
                 self.move_right()
             elif c == curses.ascii.DEL:
                 self.backspace()
-                self.redraw()
+                self.noutrefresh()
+                self.window.refresh()
             elif c == curses.KEY_DC:
                 self.delete()
-                self.redraw()
+                self.noutrefresh()
+                self.window.refresh()
 
             # Debug output
             #win_y, win_x = self.window.getyx()

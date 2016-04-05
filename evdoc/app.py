@@ -63,11 +63,11 @@ class App(object):
     def redraw(self):
         "Redraw all windows"
         # Note: the cursor shows up in the last window that is redrawn
-        #self.screen.refresh()
-        self.title.redraw()
-        self.prompt.redraw()
-        self.frame.redraw()
-        self.editor.redraw()
+        self.title.noutrefresh()
+        self.frame.noutrefresh()
+        self.editor.noutrefresh()
+        self.prompt.noutrefresh()
+        curses.doupdate()
 
     def resize(self):
         "Update the UI based on a terminal resize"

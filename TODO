@@ -16,6 +16,14 @@ DONE
 
 
 
+
+I seriously need to clean up all the refresh, redraw, etc etc methods I have...
+- it should be obvious when screen updates are performed (perhaps by default don't update)
+- come up with normal method names (ie. not 'noutrefresh')
+
+
+
+
 curses.doupdate()
 Update the physical screen. The curses library keeps two data structures, one representing the current physical screen contents and a virtual screen representing the desired next state. The doupdate() ground updates the physical screen to match the virtual screen.
 
