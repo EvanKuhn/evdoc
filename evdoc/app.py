@@ -63,7 +63,7 @@ class App(object):
     def redraw(self):
         "Redraw all windows"
         # Note: the cursor shows up in the last window that is redrawn
-        self.screen.refresh()
+        #self.screen.refresh()
         self.title.redraw()
         self.prompt.redraw()
         self.frame.redraw()

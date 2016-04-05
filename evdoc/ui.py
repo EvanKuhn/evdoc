@@ -111,19 +111,28 @@ class Frame(object):
 
 class EditBox(object):
     def __init__(self, rows, cols, start_row, start_col, logger=None):
-        self.document = evdoc.core.Document()
-        self.logger   = logger
-        self.window   = curses.newwin(rows, cols, start_row, start_col)
-        self._resize(rows, cols, start_row, start_col)
-
-    def _resize(self, rows, cols, start_row, start_col):
-        "Update the window size"
+        self.document  = evdoc.core.Document()
+        self.logger    = logger
         self.rows      = rows
         self.cols      = cols
         self.start_row = start_row
         self.start_col = start_col
-        self.window.resize(rows, cols)
-        self.window.mvwin(start_row, start_col)
+        self.window    = curses.newwin(rows, cols, start_row, start_col)
+        self._resize(rows, cols, start_row, start_col)
+
+    def _resize(self, rows, cols, start_row, start_col):
+        "Update the window size"
+        if self.rows != rows or self.cols != cols:
+            self.rows = rows
+            self.cols = cols
+            self.window.resize(rows, cols)
+
+        if self.start_row != start_row or self.start_col != start_col:
+            self.start_row = start_row
+            self.start_col = start_col
+            self.logger.log("mvwin(%d, %d)" % (start_row, start_col))
+            self.window.mvwin(start_row, start_col)
+
         self.window.keypad(1)
         self._update_cursor()
         self.redraw()
