@@ -1,6 +1,8 @@
 TODO:
-[ ] Add a '> ' string to the beginning of the prompt
+[ ] Do not update the entire window with every keystroke; only when needed
+---
 [ ] Add docstrings to all classes
+[ ] Add a '> ' string to the beginning of the prompt
 [ ] Help text
 [ ] Commands to move forward/back by word, or to front/back of line
 [ ] Accept basic commands
@@ -11,10 +13,14 @@ TODO:
 [ ] Handle mouse events
 
 DONE
+[X] Handle typing or navigating past the right side
+[X] Handle scrolling and typing past the bottom
 [X] Have both Editor and Prompt derive from common class using Editor logic
 [X] Have all classes derive from object
 [X] Allow ESC to move between editor and command prompt
 
+
+-------------------------------------------------------------------------------
 
 MOUSE EVENTS
 ------------
@@ -23,15 +29,18 @@ MOUSE EVENTS
 20 total events:  5 events * 4 modifiers = 20 events
 
 
+-------------------------------------------------------------------------------
 
-I seriously need to clean up all the refresh, redraw, etc etc methods I have...
-- it should be obvious when screen updates are performed (perhaps by default don't update)
-- come up with normal method names (ie. not 'noutrefresh')
+NAME
+    evdoc - Simple console document editor
 
+SYNOPSIS
+    evdoc [--help] [--version] [--logfile=<file>]
 
+DESCRIPTION
+    evdoc is a curses-based console document editor, written in Python.
 
-
-curses.doupdate()
-Update the physical screen. The curses library keeps two data structures, one representing the current physical screen contents and a virtual screen representing the desired next state. The doupdate() ground updates the physical screen to match the virtual screen.
-
-The virtual screen may be updated by a noutrefresh() call after write operations such as addstr() have been performed on a window. The normal refresh() call is simply noutrefresh() followed by doupdate(); if you have to update multiple windows, you can speed performance and perhaps reduce screen flicker by issuing noutrefresh() calls on all windows, followed by a single doupdate().
+OPTIONS
+    -h, --help          Show this help text
+    -v, --version       Print the version and exit
+    -l, --logfile=FILE  Print debug info to the log file

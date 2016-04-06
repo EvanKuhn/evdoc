@@ -55,9 +55,21 @@ class Layout(object):
 #==============================================================================
 
 class AppWindow(object):
+    def __init__(self):
+        self.dirty = False
+
+    def set_dirty(self):
+        "Set the window as dirty"
+        self.dirty = True
+
+    def is_dirty(self):
+        "Get the dirty flag, indicating whether the window should be redrawn"
+        return self.dirty
+
     def redraw(self):
-        "Redraw the window (ie. physically update the screen)"
+        "Redraw the window and set the dirty flag to false"
         self.window.refresh()
+        self.dirty = False
 
 #==============================================================================
 # This just displays the title
@@ -81,6 +93,7 @@ class Title(AppWindow):
         self.window.clear()
         self.window.addstr(0, start_col, self.text, curses.A_BOLD)
         self.window.noutrefresh()
+        self.set_dirty()
 
     def resize(self, layout):
         "Update the window size"
@@ -105,6 +118,7 @@ class Frame(AppWindow):
         self.window.resize(self.layout.frame_rows, self.layout.frame_cols)
         self.window.border()
         self.window.noutrefresh()
+        self.set_dirty()
 
     def resize(self, layout):
         "Update the window size"
@@ -124,6 +138,8 @@ class EditBox(AppWindow):
         self.cols      = cols
         self.start_row = start_row
         self.start_col = start_col
+        self.scroll_x  = 0
+        self.scroll_y  = 0
         self.window    = curses.newwin(rows, cols, start_row, start_col)
         self.window.keypad(1)
         self._resize(rows, cols, start_row, start_col)
@@ -133,17 +149,55 @@ class EditBox(AppWindow):
         Repopulate all contents of the window and move focus to it. The window
         will not be redrawn until curses.doupdate() is called.
         '''
+        self._update_scroll()
+        self._update_content()
+        self._update_cursor()
+
+    def _update_scroll(self):
+        '''
+        Update the X and Y scroll position of the window, if needed, to ensure
+        that the location of the cursor in the document is in view. Returns
+        true if updated, false if no changes made.
+        '''
+        changed = False
+        y, x = self.document.getyx()
+
+        # Update the horizontal scroll to make sure the cursor is visible
+        if x < self.scroll_x or x >= self.scroll_x + self.cols:
+            self.scroll_x = max(x - (self.cols / 2), 0)
+            changed = True
+
+        # Update the vertical scroll
+        if y < self.scroll_y:
+            self.scroll_y -= 1
+            changed = True
+        elif y >= self.scroll_y + self.rows:
+            self.scroll_y += 1
+            changed = True
+
+        return changed
+
+    def _update_content(self):
         self.window.clear()
 
         # Draw the last N messages, where N is the number of visible rows
         row = 0
-        for line in self.document.lines[0:self.rows]:
-            self.window.addstr(row, 0, line)
+        for line in self.document.lines[self.scroll_y : self.scroll_y + self.rows]:
+            substr = line[self.scroll_x : self.scroll_x + self.cols]
+            self.window.addstr(row, 0, substr)
             row += 1
 
         # Update the cursor and refresh
-        self._update_cursor()
         self.window.noutrefresh()
+        self.set_dirty()
+
+    def _update_cursor(self):
+        '''
+        Update the cursor location to match the document. Assumes scrolling
+        has been updated.
+        '''
+        y, x = self.document.getyx()
+        self.window.move(y - self.scroll_y, x - self.scroll_x)
 
     def _resize(self, rows, cols, start_row, start_col):
         '''
@@ -171,7 +225,7 @@ class EditBox(AppWindow):
         "Clear the editbox of all contents and redraw it"
         self.document.clear()
         self.window.clear()
-        self.window.refresh()   #TODO: do not redraw automatically (?)
+        self.redraw()   #TODO: do not redraw automatically (?)
 
     def contents(self):
         "Get the contents of the EditBox, as a string"
@@ -184,7 +238,6 @@ class EditBox(AppWindow):
     def addch(self, c):
         "Append a character to the editor. Does not redraw."
         self.document.addch(c)
-        self._update_cursor()
 
     def backspace(self):
         "Delete the character to the left of the cursor. Does not redraw."
@@ -196,36 +249,32 @@ class EditBox(AppWindow):
 
     def focus(self):
         "Move focus to this window"
-        self.window.refresh()
+        self.redraw()
 
     def redraw_current_line(self):
         "Redraw the current line"
         y, x = self.window.getyx()
         line = self.document.lines[y]
-        self.window.addstr(y, 0, line)
+        substr = line[self.scroll_x : self.scroll_x + self.cols]
+        self.window.addstr(y, 0, substr)
         self.window.redrawln(y, 0)
         self.window.move(y, x)
 
     def move_up(self):
         self.document.move_up()
-        self._update_cursor()
+        self.update()
 
     def move_down(self):
         self.document.move_down()
-        self._update_cursor()
+        self.update()
 
     def move_left(self):
         self.document.move_left()
-        self._update_cursor()
+        self.update()
 
     def move_right(self):
         self.document.move_right()
-        self._update_cursor()
-
-    def _update_cursor(self):
-        "Update the window cursor based on the document cursor"
-        y, x = self.document.getyx()
-        self.window.move(y, x)
+        self.update()
 
     def edit(self, terminators=[curses.ascii.ESC]):
         '''
@@ -237,7 +286,6 @@ class EditBox(AppWindow):
         while True:
             # Get input
             c = self.getch()
-            #self.logger.log("char: %d" % c)
 
             if c in terminators:
                 return c
@@ -246,14 +294,14 @@ class EditBox(AppWindow):
 
             # Take action
             if c == curses.ascii.LF:
+                self.scroll_x = 0
                 self.addch(c)
                 self.update()
-                self.window.refresh()
             elif c == curses.ascii.TAB:
                 pass
             elif curses.ascii.isprint(c):
                 self.addch(c)
-                self.redraw_current_line()
+                self.update()
             elif c == curses.KEY_UP:
                 self.move_up()
             elif c == curses.KEY_DOWN:
@@ -265,20 +313,23 @@ class EditBox(AppWindow):
             elif c == curses.ascii.DEL:
                 self.backspace()
                 self.update()
-                self.window.refresh()
             elif c == curses.KEY_DC:
                 self.delete()
                 self.update()
-                self.window.refresh()
             elif c == curses.KEY_MOUSE:
                 id, x, y, z, bstate = curses.getmouse()
                 self.logger.log("Mouse event: id=%d, x=%d, y=%d, z=%d, bstate=%d" %
                     (id, x, y, z, bstate))
 
+            # Redraw the window if dirty
+            if self.is_dirty():
+                self.redraw()
+
             # Debug output
-            #win_y, win_x = self.window.getyx()
-            #doc_y, doc_x = self.document.getyx()
-            #self.log("doc: (%d, %d)  win: (%d, %d)\n" % (doc_y, doc_x, win_y, win_x))
+            win_y, win_x = self.window.getyx()
+            doc_y, doc_x = self.document.getyx()
+            self.logger.log("doc: (%d, %d)  win: (%d, %d) scroll: (%d, %d) dims: (%d, %d)" %
+                (doc_y, doc_x, win_y, win_x, self.scroll_y, self.scroll_x, self.rows, self.cols))
 
 #==============================================================================
 # The Editor class displays the document

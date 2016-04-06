@@ -25,11 +25,17 @@ class Document(object):
 
     def move_up(self):
         "Move the cursor up, if possible"
-        self.move(self.y-1, self.x)
+        if self.y == 0:
+            self.x = 0
+        else:
+            self.move(self.y-1, self.x)
 
     def move_down(self):
         "Move the cursor down, if possible"
-        self.move(self.y+1, self.x)
+        if self.y == len(self.lines) - 1:
+            self.x = len(self.lines[self.y])
+        else:
+            self.move(self.y+1, self.x)
 
     def move_left(self):
         "Move the cursor left, if possible"
