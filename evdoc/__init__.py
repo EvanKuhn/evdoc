@@ -1,6 +1,7 @@
 import core
 import ui
 import app
+import main
 
 VERSION = '0.0.1'
 APPNAME = 'evdoc'

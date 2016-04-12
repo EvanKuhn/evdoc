@@ -69,6 +69,7 @@ class AppWindow(object):
 
     def redraw(self):
         "Redraw the window and set the dirty flag to false"
+        self.logger.log("redraw!")
         self.window.refresh()
         self.dirty = False
 

@@ -22,14 +22,29 @@ class Logger(object):
         self.file.close()
 
 #==============================================================================
+# A dummy logger class. Does nothing.
+#==============================================================================
+
+class DummyLogger(object):
+    def __init__(self,):
+        pass
+
+    def log(self, str):
+        pass
+
+    def close(self):
+        pass
+
+#==============================================================================
 # The App class contains all low-level UI classes, plus the main runtime loop.
 #==============================================================================
 
 class App(object):
     running = False
 
-    def __init__(self):
-        self.logger = evdoc.app.Logger()
+    def __init__(self, args):
+        self.args   = args
+        self.logger = evdoc.app.Logger() if args.debug else evdoc.app.DummyLogger()
         self.layout = evdoc.ui.Layout()
         self.screen = None
 
