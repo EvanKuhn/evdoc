@@ -39,6 +39,18 @@ class DummyLogger(object):
 # The App class contains all low-level UI classes, plus the main runtime loop.
 #==============================================================================
 
+def update_status(app):
+    doc = app.editor.document
+    y, x = doc.getyx()
+    if app.editor.scroll_y == 0:
+        pct = 'Top'
+    elif app.editor.scroll_y + app.layout.editor_rows >= len(doc.lines):
+        pct = 'Bot'
+    else:
+        lines_not_shown = len(doc.lines) - app.layout.editor_rows
+        pct = "%d%%" % int(100 * app.editor.scroll_y / lines_not_shown)
+    app.status.update(y, x, pct)
+
 class App(object):
     running = False
 
@@ -82,6 +94,7 @@ class App(object):
         self.title.update()
         self.frame.update()
         self.editor.update()
+        self.status.update()
         self.prompt.update()
         curses.doupdate()
 
@@ -90,6 +103,7 @@ class App(object):
         self.layout.update()
         self.logger.log("Resize to %d x %d" % (self.layout.terminal_cols, self.layout.terminal_rows))
         self.title.resize(self.layout)
+        self.status.resize(self.layout)
         self.prompt.resize(self.layout)
         self.frame.resize(self.layout)
         self.editor.resize(self.layout)
@@ -104,6 +118,8 @@ class App(object):
             self.title = evdoc.ui.Title(self.layout, self.logger, evdoc.TITLE)
             self.frame = evdoc.ui.Frame(self.layout, self.logger)
             self.editor = evdoc.ui.Editor(self.layout, self.logger)
+            self.editor.set_on_char(update_status, self)
+            self.status = evdoc.ui.StatusBar(self.layout, self.logger)
             self.prompt = evdoc.ui.Prompt(self.layout, self.logger)
             self.redraw()
 

@@ -10,6 +10,8 @@ import evdoc
 class Layout(object):
     TITLE_ROWS = 1
     PROMPT_ROWS = 1
+    STATUS_BAR_ROWS = 1
+    NON_EDITOR_ROWS = TITLE_ROWS + PROMPT_ROWS + STATUS_BAR_ROWS
 
     def __init__(self):
         "Determine the terminal size, and size of each window"
@@ -29,7 +31,7 @@ class Layout(object):
         self.title_start_row  = 0
         self.title_start_col  = 0
 
-        self.frame_rows       = rows - Layout.TITLE_ROWS - Layout.PROMPT_ROWS
+        self.frame_rows       = rows - Layout.NON_EDITOR_ROWS
         self.frame_cols       = cols
         self.frame_start_row  = 1
         self.frame_start_col  = 0
@@ -38,6 +40,11 @@ class Layout(object):
         self.editor_cols      = self.frame_cols - 2
         self.editor_start_row = self.frame_start_row + 1
         self.editor_start_col = self.frame_start_col + 1
+
+        self.status_rows      = Layout.STATUS_BAR_ROWS
+        self.status_cols      = cols
+        self.status_start_row = rows - 2
+        self.status_start_col = 0
 
         self.prompt_rows      = Layout.PROMPT_ROWS
         self.prompt_cols      = cols
@@ -104,6 +111,52 @@ class Title(AppWindow):
         self.update()
 
 #==============================================================================
+# Status bar
+#==============================================================================
+
+class StatusBar(AppWindow):
+    def __init__(self, layout, logger=None):
+        super(evdoc.ui.StatusBar, self).__init__(logger)
+        self.layout = layout
+        self.y      = 0
+        self.x      = 0
+        self.pct    = ''
+        self.file   = '(new file)'
+        self.window = curses.newwin(layout.status_rows, layout.status_cols,
+            layout.status_start_row, layout.status_start_col)
+        self.update()
+
+    def update(self, y=None, x=None, pct=None, file=None):
+        '''
+        Update the window's contents. The window will not be redrawn until
+        curses.doupdate() is called.
+        '''
+        # Update internal variables
+        if y: self.y = y
+        if x: self.x = x
+        if pct: self.pct = pct
+        if file: self.file = file
+
+        # Build the status bar string
+        text = "  %d,%d" % (self.y, self.x)                 # y,x coordinates
+        text = ("%*s " % (-12, text)) + self.file           # add file
+        text = "%*s" % (-(self.layout.status_cols-8), text) # trailing spaces
+        text = text + (' %*s  ' % (4, self.pct))          # percent location
+        text = text[0:self.layout.status_cols-1]            # truncate if needed
+
+        # Set the window contents
+        self.window.resize(self.layout.status_rows, self.layout.status_cols)
+        self.window.clear()
+        self.window.addstr(0, 0, text, curses.A_REVERSE)
+        self.window.noutrefresh()
+        self.set_dirty()
+
+    def resize(self, layout):
+        "Update the window size"
+        self.layout = layout
+        self.update()
+
+#==============================================================================
 # The Frame simply draws a frame (around the editor)
 #==============================================================================
 
@@ -137,17 +190,23 @@ class Frame(AppWindow):
 class EditBox(AppWindow):
     def __init__(self, rows, cols, start_row, start_col, logger):
         super(evdoc.ui.EditBox, self).__init__(logger)
-        self.document  = evdoc.core.Document()
-        self.logger    = logger
-        self.rows      = rows
-        self.cols      = cols
-        self.start_row = start_row
-        self.start_col = start_col
-        self.scroll_x  = 0
-        self.scroll_y  = 0
-        self.window    = curses.newwin(rows, cols, start_row, start_col)
+        self.document    = evdoc.core.Document()
+        self.logger      = logger
+        self.rows        = rows
+        self.cols        = cols
+        self.start_row   = start_row
+        self.start_col   = start_col
+        self.scroll_x    = 0
+        self.scroll_y    = 0
+        self.on_char     = None
+        self.on_char_arg = None
+        self.window      = curses.newwin(rows, cols, start_row, start_col)
         self.window.keypad(1)
         self._resize(rows, cols, start_row, start_col)
+
+    def set_on_char(self, func, app):
+        self.on_char = func
+        self.on_char_arg = app
 
     def update(self):
         '''
@@ -325,6 +384,10 @@ class EditBox(AppWindow):
                 id, x, y, z, bstate = curses.getmouse()
                 self.logger.log("Mouse event: id=%d, x=%d, y=%d, z=%d, bstate=%d" %
                     (id, x, y, z, bstate))
+
+            # Run the on_char callback
+            if self.on_char:
+                self.on_char(self.on_char_arg)
 
             # Redraw the window if dirty
             if self.is_dirty():

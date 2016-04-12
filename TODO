@@ -34,6 +34,8 @@ MOUSE EVENTS
 
 
 -------------------------------------------------------------------------------
+Usage
+-------------------------------------------------------------------------------
 
 NAME
     evdoc - Simple console document editor
@@ -48,3 +50,11 @@ OPTIONS
     -h, --help          Show this help text
     -v, --version       Print the version and exit
     -l, --logfile=FILE  Print debug info to the log file
+        --init          Initialize a new .evdoc config file
+
+
+-------------------------------------------------------------------------------
+Config File (yaml)
+-------------------------------------------------------------------------------
+line_numbers: true
+save_new_docs_to_temp_file: true
