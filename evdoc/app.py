@@ -86,8 +86,8 @@ class App(object):
         try:
             # Start curses and initialize all curses-based objects
             self._start_curses()
-            self.title = evdoc.ui.Title(self.layout, evdoc.TITLE)
-            self.frame = evdoc.ui.Frame(self.layout)
+            self.title = evdoc.ui.Title(self.layout, self.logger, evdoc.TITLE)
+            self.frame = evdoc.ui.Frame(self.layout, self.logger)
             self.editor = evdoc.ui.Editor(self.layout, self.logger)
             self.prompt = evdoc.ui.Prompt(self.layout, self.logger)
             self.redraw()

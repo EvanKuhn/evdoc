@@ -1,3 +1,3 @@
 # evdoc
 
-Simple Python-based document editor
+A curses-based console document editor, written in Python.

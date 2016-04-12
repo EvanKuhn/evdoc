@@ -55,7 +55,8 @@ class Layout(object):
 #==============================================================================
 
 class AppWindow(object):
-    def __init__(self):
+    def __init__(self, logger):
+        self.logger = logger
         self.dirty = False
 
     def set_dirty(self):
@@ -76,7 +77,8 @@ class AppWindow(object):
 #==============================================================================
 
 class Title(AppWindow):
-    def __init__(self, layout, text):
+    def __init__(self, layout, logger, text):
+        super(evdoc.ui.Title, self).__init__(logger)
         self.layout = layout
         self.text = text
         self.window = curses.newwin(layout.title_rows, layout.title_cols,
@@ -105,7 +107,8 @@ class Title(AppWindow):
 #==============================================================================
 
 class Frame(AppWindow):
-    def __init__(self, layout):
+    def __init__(self, layout, logger):
+        super(evdoc.ui.Frame, self).__init__(logger)
         self.layout = layout
         self.window = curses.newwin(layout.frame_rows, layout.frame_cols,
             layout.frame_start_row, layout.frame_start_col)
@@ -131,7 +134,8 @@ class Frame(AppWindow):
 #==============================================================================
 
 class EditBox(AppWindow):
-    def __init__(self, rows, cols, start_row, start_col, logger=None):
+    def __init__(self, rows, cols, start_row, start_col, logger):
+        super(evdoc.ui.EditBox, self).__init__(logger)
         self.document  = evdoc.core.Document()
         self.logger    = logger
         self.rows      = rows

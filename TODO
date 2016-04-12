@@ -1,4 +1,8 @@
 TODO:
+[ ] Usage info
+[ ] Config file
+[ ] Line numbers
+[ ] Status bar: y,x coordinate, filename, etc
 [ ] Do not update the entire window with every keystroke; only when needed
 ---
 [ ] Add docstrings to all classes
